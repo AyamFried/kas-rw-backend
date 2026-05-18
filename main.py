@@ -3,15 +3,14 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import Optional
 from datetime import date
-
 import mysql.connector
 import os
 from dotenv import load_dotenv
 
-# Load environment variables from .env file
 load_dotenv()
 
 app = FastAPI(title="Kas RW Backend API")
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -20,12 +19,13 @@ app.add_middleware(
 )
 
 def get_db_connection():
+    port_env = os.getenv("DB_PORT", "3306")
     return mysql.connector.connect(
-        host=os.getenv("DB_HOST"),
-        port=os.getenv("DB_PORT"),
-        user=os.getenv("DB_USER"),
-        password=os.getenv("DB_PASSWORD"),
-        database=os.getenv("DB_NAME")
+        host=os.getenv("DB_HOST", "192.168.56.11"),
+        port=int(port_env),
+        user=os.getenv("DB_USER", "karsw_user"),
+        password=os.getenv("DB_PASSWORD", "123"),
+        database=os.getenv("DB_NAME", "karsw")
     )
 
 class TransactionBase(BaseModel):
@@ -41,18 +41,25 @@ class updateTransaction(BaseModel):
     jumlah : Optional[float] = None
 
 @app.get("/")
-def root ():
+def root():
     return {"message": "Welcome to Kas RW Backend API!"}
 
 @app.post("/transactions", status_code=201)
 def create_transaction(transaction: TransactionBase):
-    conn = get_db_connection()
-    cursor = conn.cursor()
-    query = "INSERT INTO transaksi (tanggal, keterangan, jenis, jumlah) VALUES (%s, %s, %s, %s)"
-    values = (transaction.tanggal, transaction.keterangan, transaction.jenis, transaction.jumlah)
-    cursor.execute(query, values)
-    conn.commit()
-    new_id = cursor.lastrowid
-    cursor.close()
-    conn.close()
-    return {"message": "Transaction created successfully!", "id": new_id}
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        
+        query = "INSERT INTO transaksi (tanggal, keterangan, jenis, jumlah) VALUES (%s, %s, %s, %s)"
+        values = (transaction.tanggal, transaction.keterangan, transaction.jenis, transaction.jumlah)
+        
+        cursor.execute(query, values)
+        conn.commit()
+        new_id = cursor.lastrowid
+        
+        cursor.close()
+        conn.close()
+        
+        return {"message": "Transaction created successfully!", "id": new_id}
+    except mysql.connector.Error as err:
+        raise HTTPException(status_code=500, detail=f"Database Error: {err}")

@@ -1,0 +1,73 @@
+- name: konfigurasi vm-database
+  hosts: database
+  become: true
+
+  vars:
+
+    ansible_users: vagrant
+    ansible_password: vagrant
+
+    db_name: karsw
+    db_user: karsw_user
+    db_password: "123"
+    db_host: "192.168.56.10"
+
+  tasks:
+    - name: Update apt cache
+      ansible.builtin.apt:
+        update_cache: true
+
+    #- name: Install MySQL Server
+     # ansible.builtin.apt:
+      # state: present
+
+    #- name: Install python3-mysql
+     # ansible.builtin.apt:
+      #  name: python3-mysql
+       # state: present
+
+    #- name: Memastikan MySQL berjalan
+     # ansible.builtin.service:
+      #  name: mysql
+       # state: started
+        #enabled: true
+
+- name: konfigurasi vm-frontend
+  hosts: frontend
+  become: true
+
+  vars:
+
+    ansible_users: vagrant
+    ansible_password: vagrant
+
+  tasks:
+    - name: Update apt cache
+      ansible.builtin.apt:
+        update_cache: true
+    
+    - name: install nginx
+      ansible.builtin.apt:
+        name: nginx
+        state: present
+    
+    - name: Memastikan nginx berjalan
+      ansible.builtin.service:
+        name: nginx
+        state: started
+        enabled: true
+
+    - name: buat halaman html sederhana
+      ansible.builtin.copy:
+        dest: /var/www/html/index.html
+        content: | 
+         "<html>
+         <br><br><br>
+         <div style="display: flex; justify-content: center; align-items: center;">
+          <h1>Selamat Datang di vm-Frontend!</h1>
+          </div>
+          </body>
+          </html>"
+        owner: www-data
+        group: www-data
+        mode: '0644'
